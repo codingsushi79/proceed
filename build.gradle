@@ -1,0 +1,60 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'dev.proceed'
+version = '0.1.0'
+description = 'Procedurally generate Minecraft structures from .litematic files with relative connection points.'
+
+java {
+    // Java 17 keeps the library usable by the widest range of modern Minecraft mods
+    // (1.18+ toolchains) while still allowing records, sealed types and switch expressions.
+    // Compiled with whatever JDK runs Gradle (>= 17), targeting 17 bytecode.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+// Runnable, file-free demo that prints a generated layout as an ASCII map:
+//   ./gradlew runDemo            (random seed)
+//   ./gradlew runDemo --args=42  (fixed seed)
+tasks.register('runDemo', JavaExec) {
+    group = 'application'
+    description = 'Generate a sample structure and print a top-down ASCII map.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.proceed.example.MazeDemo'
+}
+
+// The library is intentionally dependency-free so it drops cleanly into any mod loader
+// (Forge / Fabric / NeoForge / Quilt) without pulling transitive baggage onto the classpath.
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
