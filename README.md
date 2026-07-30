@@ -285,73 +285,88 @@ Requires JDK 17+. The library targets Java 17 bytecode for broad mod compatibili
 
 ---
 
-## Using it in your mod (via GitHub Packages)
+## Using it in your mod
 
-Proceed publishes to **GitHub Packages**. GitHub Packages requires authentication even to *read*
-public packages, so consumers add the repository with a GitHub token that has the `read:packages`
-scope:
+Proceed publishes to **Maven Central**, so consumers need **no authentication** — just the standard
+repository:
 
 ```groovy
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/codingsushi79/proceed")   // the Proceed repo
-        credentials {
-            username = System.getenv("GITHUB_ACTOR") ?: findProperty("gpr.user")
-            password = System.getenv("GITHUB_TOKEN") ?: findProperty("gpr.key")
-        }
-    }
+    mavenCentral()
 }
 
 dependencies {
-    implementation 'dev.proceed:proceed:0.1.0'
+    implementation 'io.github.codingsushi79:proceed:0.1.0'
 }
 ```
 
-Put your token in `~/.gradle/gradle.properties` (never commit it):
-
-```properties
-gpr.user=your-github-username
-gpr.key=ghp_your_personal_access_token_with_read_packages
-```
-
-> Because GitHub Packages requires auth for reads, some mod authors prefer to also mirror releases
-> to a no-auth host (e.g. Maven Central / Modrinth Maven). GitHub Packages is the simplest starting
-> point and needs no extra accounts.
+That's it. (The Maven coordinate is `io.github.codingsushi79:proceed`; the Java package is
+`dev.proceed`.)
 
 ---
 
 ## Publishing (maintainers)
 
-Publishing is configured in [`build.gradle`](build.gradle) and driven entirely by environment
-variables / Gradle properties, so **no secrets are committed**.
+Publishing goes to the **Maven Central Portal** via the
+[vanniktech maven-publish](https://github.com/vanniktech/gradle-maven-publish-plugin) plugin,
+configured in [`build.gradle`](build.gradle). Credentials and the signing key come from the
+environment, so **no secrets are committed**.
+
+### One-time setup
+
+1. **Central Portal account + namespace.** Sign in at
+   [central.sonatype.com](https://central.sonatype.com/), add the namespace
+   **`io.github.codingsushi79`**, and verify it (the portal has you create a throwaway public repo
+   named after the verification code on the `codingsushi79` account). Free.
+2. **User token.** In the portal, **Account → Generate User Token** — this gives the
+   `mavenCentralUsername` / `mavenCentralPassword` pair.
+3. **PGP signing key.** Central requires every artifact to be signed:
+   ```bash
+   gpg --quick-generate-key "codingsushi79 <you@example.com>"
+   gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>      # publish the public key
+   gpg --armor --export-secret-keys <KEY_ID>                      # the value for SIGNING_KEY
+   ```
 
 ### Automatic — on every GitHub Release (recommended)
 
-[`.github/workflows/publish.yml`](.github/workflows/publish.yml) builds, tests and publishes
-whenever you publish a Release. It uses the workflow's built-in `GITHUB_TOKEN`
-(`packages: write`) — nothing to configure. To cut a release:
+Add these **repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `MAVEN_CENTRAL_USERNAME` | Central Portal user-token username |
+| `MAVEN_CENTRAL_PASSWORD` | Central Portal user-token password |
+| `SIGNING_KEY` | the full ASCII-armored PGP **private** key (from the export above) |
+| `SIGNING_PASSWORD` | the key's passphrase |
+
+Then [`.github/workflows/publish.yml`](.github/workflows/publish.yml) builds, tests, signs and
+publishes whenever you publish a Release:
 
 1. Bump `version` in `build.gradle` (e.g. `0.1.0` → `0.2.0`).
 2. Commit, then create a release/tag on GitHub (or run the workflow via **Actions → Run workflow**).
 
+The build is set to release automatically once Central's validation passes, so the artifact appears
+on Maven Central without any manual step in the portal (allow a little time for it to sync).
+
 ### Manual — from your machine
 
-Create a [Personal Access Token](https://github.com/settings/tokens) with the **`write:packages`**
-scope, then:
+Put the same four values in `~/.gradle/gradle.properties` (never commit it):
 
-```bash
-export GITHUB_REPOSITORY=codingsushi79/proceed          # e.g. yourname/proceed
-export GITHUB_ACTOR=your-github-username
-export GITHUB_TOKEN=ghp_your_token_with_write_packages
-./gradlew publish
+```properties
+mavenCentralUsername=...
+mavenCentralPassword=...
+signingInMemoryKey=-----BEGIN PGP PRIVATE KEY BLOCK----- ...
+signingInMemoryKeyPassword=...
 ```
 
-Or set `githubRepository`, `gpr.user` and `gpr.key` in `~/.gradle/gradle.properties` and just run
-`./gradlew publish`. To test the artifacts locally without pushing anywhere, use
-`./gradlew publishToMavenLocal` (writes to `~/.m2/repository`).
+then:
 
-The publication includes the main jar plus **sources** and **javadoc** jars and a complete POM
-(license, SCM, developers).
+```bash
+./gradlew publishToMavenCentral        # upload + auto-release to Maven Central
+./gradlew publishToMavenLocal          # or just stage the artifacts in ~/.m2 to inspect them
+```
+
+Each publication includes the main jar plus **sources** and **javadoc** jars and a complete POM
+(license, SCM, developers) — all signed.
 
 ---
 

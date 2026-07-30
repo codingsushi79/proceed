@@ -1,11 +1,17 @@
 plugins {
     id 'java-library'
-    id 'maven-publish'
+    // Publishes to the Maven Central Portal (central.sonatype.com), handling PGP signing and the
+    // sources/javadoc jars Central requires. Consumers then need no authentication at all.
+    id 'com.vanniktech.maven.publish' version '0.30.0'
 }
 
-group = 'dev.proceed'
+// NOTE: this is the Maven *groupId*, not the Java package (which stays `dev.proceed`). Central
+// verifies you own this namespace via your GitHub account (io.github.<user>).
+group = 'io.github.codingsushi79'
 version = '0.1.0'
 description = 'Procedurally generate Minecraft structures from .litematic files with relative connection points.'
+
+def githubSlug = 'codingsushi79/proceed'
 
 java {
     // Java 17 keeps the library usable by the widest range of modern Minecraft mods
@@ -13,8 +19,7 @@ java {
     // Compiled with whatever JDK runs Gradle (>= 17), targeting 17 bytecode.
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-    withSourcesJar()
-    withJavadocJar()
+    // Sources & javadoc jars are added by the maven-publish plugin below (Central requires them).
 }
 
 repositories {
@@ -51,57 +56,46 @@ tasks.register('runDemo', JavaExec) {
 // The library is intentionally dependency-free so it drops cleanly into any mod loader
 // (Forge / Fabric / NeoForge / Quilt) without pulling transitive baggage onto the classpath.
 
-// ---- Publishing to GitHub Packages ---------------------------------------------------------
+// ---- Publishing to Maven Central -----------------------------------------------------------
 //
-// The target repo ("owner/name") and credentials come from the environment so nothing secret is
-// committed. In GitHub Actions they are provided automatically; locally, set them in
-// ~/.gradle/gradle.properties (see README) or pass -P flags.
+// Credentials and the signing key come from the environment / Gradle properties, so nothing
+// secret is committed:
 //
-//   owner/name : GITHUB_REPOSITORY env  ->  githubRepository property  ->  placeholder
-//   username   : GITHUB_ACTOR env       ->  gpr.user property
-//   token      : GITHUB_TOKEN env       ->  gpr.key property  (needs the write:packages scope)
-def githubRepository = System.getenv('GITHUB_REPOSITORY')
-        ?: (findProperty('githubRepository') ?: 'codingsushi79/proceed')
-def githubUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
-def githubToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key')
+//   mavenCentralUsername / mavenCentralPassword    - a Central Portal user token
+//   signingInMemoryKey / signingInMemoryKeyPassword - your ASCII-armored PGP private key + pass
+//
+// Locally, put them in ~/.gradle/gradle.properties; in CI they are wired from GitHub secrets via
+// ORG_GRADLE_PROJECT_* env vars (see .github/workflows/publish.yml).
+mavenPublishing {
+    // Upload to the Central Portal and release automatically once validation passes.
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL, true)
+    signAllPublications()
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
+    coordinates(group.toString(), 'proceed', version.toString())
 
-            pom {
-                name = 'Proceed'
-                description = project.description
-                url = "https://github.com/${githubRepository}"
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'proceed'
-                        name = 'Proceed contributors'
-                    }
-                }
-                scm {
-                    url = "https://github.com/${githubRepository}"
-                    connection = "scm:git:https://github.com/${githubRepository}.git"
-                    developerConnection = "scm:git:ssh://git@github.com/${githubRepository}.git"
-                }
+    pom {
+        name = 'Proceed'
+        description = project.description
+        inceptionYear = '2026'
+        url = "https://github.com/${githubSlug}"
+        licenses {
+            license {
+                name = 'MIT License'
+                url = 'https://opensource.org/licenses/MIT'
+                distribution = 'repo'
             }
         }
-    }
-    repositories {
-        maven {
-            name = 'GitHubPackages'
-            url = "https://maven.pkg.github.com/${githubRepository}"
-            credentials {
-                username = githubUser
-                password = githubToken
+        developers {
+            developer {
+                id = 'codingsushi79'
+                name = 'codingsushi79'
+                url = 'https://github.com/codingsushi79'
             }
+        }
+        scm {
+            url = "https://github.com/${githubSlug}"
+            connection = "scm:git:https://github.com/${githubSlug}.git"
+            developerConnection = "scm:git:ssh://git@github.com/${githubSlug}.git"
         }
     }
 }

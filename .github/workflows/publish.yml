@@ -1,6 +1,7 @@
-name: Publish to GitHub Packages
+name: Publish to Maven Central
 
-# Publishes the library whenever you cut a GitHub Release, and lets you trigger it by hand.
+# Publishes the library to Maven Central whenever you cut a GitHub Release,
+# and lets you trigger it by hand from the Actions tab.
 on:
   release:
     types: [published]
@@ -11,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # required to publish to GitHub Packages
 
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +25,12 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Publish
-        run: ./gradlew publish
+      - name: Publish to Maven Central
+        run: ./gradlew publishToMavenCentral --no-configuration-cache
         env:
-          # Provided automatically by Actions — GITHUB_REPOSITORY is "owner/name",
-          # GITHUB_ACTOR is the triggering user, GITHUB_TOKEN has packages:write here.
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Central Portal user token (Account -> Generate User Token).
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          # ASCII-armored PGP private key and its passphrase, used to sign the artifacts.
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
