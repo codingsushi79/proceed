@@ -51,10 +51,57 @@ tasks.register('runDemo', JavaExec) {
 // The library is intentionally dependency-free so it drops cleanly into any mod loader
 // (Forge / Fabric / NeoForge / Quilt) without pulling transitive baggage onto the classpath.
 
+// ---- Publishing to GitHub Packages ---------------------------------------------------------
+//
+// The target repo ("owner/name") and credentials come from the environment so nothing secret is
+// committed. In GitHub Actions they are provided automatically; locally, set them in
+// ~/.gradle/gradle.properties (see README) or pass -P flags.
+//
+//   owner/name : GITHUB_REPOSITORY env  ->  githubRepository property  ->  placeholder
+//   username   : GITHUB_ACTOR env       ->  gpr.user property
+//   token      : GITHUB_TOKEN env       ->  gpr.key property  (needs the write:packages scope)
+def githubRepository = System.getenv('GITHUB_REPOSITORY')
+        ?: (findProperty('githubRepository') ?: 'OWNER/REPO')
+def githubUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+def githubToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key')
+
 publishing {
     publications {
         maven(MavenPublication) {
             from components.java
+
+            pom {
+                name = 'Proceed'
+                description = project.description
+                url = "https://github.com/${githubRepository}"
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'proceed'
+                        name = 'Proceed contributors'
+                    }
+                }
+                scm {
+                    url = "https://github.com/${githubRepository}"
+                    connection = "scm:git:https://github.com/${githubRepository}.git"
+                    developerConnection = "scm:git:ssh://git@github.com/${githubRepository}.git"
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = "https://maven.pkg.github.com/${githubRepository}"
+            credentials {
+                username = githubUser
+                password = githubToken
+            }
         }
     }
 }

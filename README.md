@@ -283,13 +283,75 @@ same structure.
 Requires JDK 17+. The library targets Java 17 bytecode for broad mod compatibility and pulls in
 **zero runtime dependencies**.
 
-Add it to your mod (once published):
+---
+
+## Using it in your mod (via GitHub Packages)
+
+Proceed publishes to **GitHub Packages**. GitHub Packages requires authentication even to *read*
+public packages, so consumers add the repository with a GitHub token that has the `read:packages`
+scope:
 
 ```groovy
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/OWNER/REPO")   // the Proceed repo
+        credentials {
+            username = System.getenv("GITHUB_ACTOR") ?: findProperty("gpr.user")
+            password = System.getenv("GITHUB_TOKEN") ?: findProperty("gpr.key")
+        }
+    }
+}
+
 dependencies {
     implementation 'dev.proceed:proceed:0.1.0'
 }
 ```
+
+Put your token in `~/.gradle/gradle.properties` (never commit it):
+
+```properties
+gpr.user=your-github-username
+gpr.key=ghp_your_personal_access_token_with_read_packages
+```
+
+> Because GitHub Packages requires auth for reads, some mod authors prefer to also mirror releases
+> to a no-auth host (e.g. Maven Central / Modrinth Maven). GitHub Packages is the simplest starting
+> point and needs no extra accounts.
+
+---
+
+## Publishing (maintainers)
+
+Publishing is configured in [`build.gradle`](build.gradle) and driven entirely by environment
+variables / Gradle properties, so **no secrets are committed**.
+
+### Automatic — on every GitHub Release (recommended)
+
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml) builds, tests and publishes
+whenever you publish a Release. It uses the workflow's built-in `GITHUB_TOKEN`
+(`packages: write`) — nothing to configure. To cut a release:
+
+1. Bump `version` in `build.gradle` (e.g. `0.1.0` → `0.2.0`).
+2. Commit, then create a release/tag on GitHub (or run the workflow via **Actions → Run workflow**).
+
+### Manual — from your machine
+
+Create a [Personal Access Token](https://github.com/settings/tokens) with the **`write:packages`**
+scope, then:
+
+```bash
+export GITHUB_REPOSITORY=OWNER/REPO          # e.g. yourname/proceed
+export GITHUB_ACTOR=your-github-username
+export GITHUB_TOKEN=ghp_your_token_with_write_packages
+./gradlew publish
+```
+
+Or set `githubRepository`, `gpr.user` and `gpr.key` in `~/.gradle/gradle.properties` and just run
+`./gradlew publish`. To test the artifacts locally without pushing anywhere, use
+`./gradlew publishToMavenLocal` (writes to `~/.m2/repository`).
+
+The publication includes the main jar plus **sources** and **javadoc** jars and a complete POM
+(license, SCM, developers).
 
 ---
 
