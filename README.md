@@ -294,7 +294,7 @@ scope:
 ```groovy
 repositories {
     maven {
-        url = uri("https://maven.pkg.github.com/OWNER/REPO")   // the Proceed repo
+        url = uri("https://maven.pkg.github.com/codingsushi79/proceed")   // the Proceed repo
         credentials {
             username = System.getenv("GITHUB_ACTOR") ?: findProperty("gpr.user")
             password = System.getenv("GITHUB_TOKEN") ?: findProperty("gpr.key")
@@ -340,7 +340,7 @@ Create a [Personal Access Token](https://github.com/settings/tokens) with the **
 scope, then:
 
 ```bash
-export GITHUB_REPOSITORY=OWNER/REPO          # e.g. yourname/proceed
+export GITHUB_REPOSITORY=codingsushi79/proceed          # e.g. yourname/proceed
 export GITHUB_ACTOR=your-github-username
 export GITHUB_TOKEN=ghp_your_token_with_write_packages
 ./gradlew publish

@@ -61,7 +61,7 @@ tasks.register('runDemo', JavaExec) {
 //   username   : GITHUB_ACTOR env       ->  gpr.user property
 //   token      : GITHUB_TOKEN env       ->  gpr.key property  (needs the write:packages scope)
 def githubRepository = System.getenv('GITHUB_REPOSITORY')
-        ?: (findProperty('githubRepository') ?: 'OWNER/REPO')
+        ?: (findProperty('githubRepository') ?: 'codingsushi79/proceed')
 def githubUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
 def githubToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key')
 
